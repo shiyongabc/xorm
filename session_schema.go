@@ -207,19 +207,15 @@ func (session *Session) addColumn(colName string) error {
 
 func (session *Session) addIndex(tableName, idxName string) error {
 	index := session.statement.RefTable.Indexes[idxName]
-	sqlStr := session.engine.dialect.DropIndexSql(tableName, index)
+	sqlStr := session.engine.dialect.CreateIndexSql(tableName, index)
 	_, err := session.exec(sqlStr)
-	sqlStr = session.engine.dialect.CreateIndexSql(tableName, index)
-	_, err = session.exec(sqlStr)
 	return err
 }
 
 func (session *Session) addUnique(tableName, uqeName string) error {
 	index := session.statement.RefTable.Indexes[uqeName]
-	sqlStr := session.engine.dialect.DropIndexSql(tableName, index)
+	sqlStr := session.engine.dialect.CreateIndexSql(tableName, index)
 	_, err := session.exec(sqlStr)
-	sqlStr = session.engine.dialect.CreateIndexSql(tableName, index)
-	_, err = session.exec(sqlStr)
 	return err
 }
 

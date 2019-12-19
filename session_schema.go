@@ -197,7 +197,22 @@ func (session *Session) isIndexExist2(tableName string, cols []string, unique bo
 	}
 	return false, nil
 }
+func  IsIndexExist(session *Session,tableName string, cols []string, unique bool) (bool, error) {
+	indexes, err := session.engine.dialect.GetIndexes(tableName)
+	if err != nil {
+		return false, err
+	}
 
+	for _, index := range indexes {
+		if sliceEq(index.Cols, cols) {
+			if unique {
+				return index.Type == core.UniqueType, nil
+			}
+			return index.Type == core.IndexType, nil
+		}
+	}
+	return false, nil
+}
 func (session *Session) addColumn(colName string) error {
 	col := session.statement.RefTable.GetColumn(colName)
 	sql, args := session.statement.genAddColumnStr(col)
@@ -207,16 +222,26 @@ func (session *Session) addColumn(colName string) error {
 
 func (session *Session) addIndex(tableName, idxName string) error {
 	index := session.statement.RefTable.Indexes[idxName]
-	sqlStr := session.engine.dialect.CreateIndexSql(tableName, index)
-	_, err := session.exec(sqlStr)
-	return err
+	isExists,error:=IsIndexExist(session,tableName,index.Cols,false)
+	if !isExists && error==nil{
+		sqlStr := session.engine.dialect.CreateIndexSql(tableName, index)
+		_, err := session.exec(sqlStr)
+		return err
+	}
+
+	return nil
 }
 
 func (session *Session) addUnique(tableName, uqeName string) error {
 	index := session.statement.RefTable.Indexes[uqeName]
-	sqlStr := session.engine.dialect.CreateIndexSql(tableName, index)
-	_, err := session.exec(sqlStr)
-	return err
+	isExists,error:=IsIndexExist(session,tableName,index.Cols,true)
+	if !isExists && error==nil{
+		sqlStr := session.engine.dialect.CreateIndexSql(tableName, index)
+		_, err := session.exec(sqlStr)
+		return err
+	}
+	return nil
+
 }
 
 // Sync2 synchronize structs to database tables
@@ -379,6 +404,7 @@ func (session *Session) Sync2(beans ...interface{}) error {
 
 			if oriIndex != nil {
 				if oriIndex.Type != index.Type {
+
 					sql := engine.dialect.DropIndexSql(tbNameWithSchema, oriIndex)
 					_, err = session.exec(sql)
 					if err != nil {
